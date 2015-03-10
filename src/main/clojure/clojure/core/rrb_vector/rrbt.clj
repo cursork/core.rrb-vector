@@ -7,6 +7,7 @@
              :refer [ranges overflow? last-range regular-ranges
                      first-child last-child remove-leftmost-child
                      replace-leftmost-child replace-rightmost-child
+                     validate-node!
                      fold-tail new-path index-of-nil
                      object-am object-nm primitive-nm]]
             [clojure.core.rrb-vector.transients :refer [transient-helper]]
@@ -19,6 +20,7 @@
            (clojure.core.rrb_vector.nodes NodeManager)
            (java.util.concurrent.atomic AtomicReference)))
 
+(defonce last-slice (atom nil))
 (def ^:const rrbt-concat-threshold 33)
 (def ^:const max-extra-search-steps 2)
 
@@ -361,6 +363,7 @@
   (let [shift (int shift)
         start (int start)
         end   (int end)]
+    (prn :slice-left start end)
     (if (zero? shift)
       ;; potentially return a short node
       (let [arr     (.array nm node)
@@ -429,7 +432,7 @@
               (when (< j new-len)
                 (aset rngs j r)
                 (recur (unchecked-inc-int j) (unchecked-add-int r step))))
-            (aset rngs (dec new-len) (- end start))
+            ;(aset rngs (dec new-len) (- end start))
             (aset rngs 32 new-len)
             (System/arraycopy arr (if (nil? new-child) (unchecked-inc-int i) i)
                               new-arr 0
@@ -1046,6 +1049,8 @@
   
   PSliceableVector
   (slicev [this start end]
+    (reset! last-slice [this start end])
+    (prn :slice start end)
     (let [start   (int start)
           end     (int end)
           new-cnt (unchecked-subtract-int end start)]
@@ -1072,10 +1077,14 @@
                   new-root  (if tail-cut?
                               root
                               (slice-right nm am root shift end))
+                  _ (validate-node! nm new-root)
+                  _ (prn :A)
                   new-root  (if (zero? start)
                               new-root
                               (slice-left nm am new-root shift start
                                           (min end tail-off)))
+                  _ (validate-node! nm new-root)
+                  _ (prn :B)
                   new-tail  (if tail-cut?
                               (let [new-len  (unchecked-subtract-int end tail-off)
                                     new-tail (.array am new-len)]
@@ -1091,15 +1100,21 @@
                                                  shift new-root
                                                  (.array am 0) nil -1 -1)
                                         shift new-cnt new-root))]
+                  (when new-root (validate-node! nm new-root))
+                  (prn :C)
+              ;(prn :tail-cut? tail-cut? :start start)
               (if (nil? new-root)
                 (Vector. nm am new-cnt 5 (.empty nm) new-tail _meta -1 -1)
                 (loop [r new-root
                        s (int shift)]
+                  ;(prn 'oi) ;only one
                   (if (and (> s (int 5))
                            (nil? (aget ^objects (.array nm r) 1)))
                     (recur (aget ^objects (.array nm r) 0)
                            (unchecked-subtract-int s (int 5)))
-                    (Vector. nm am new-cnt s r new-tail _meta -1 -1))))))))))
+                    (do
+                      (validate-node! nm r)
+                      (Vector. nm am new-cnt s r new-tail _meta -1 -1)))))))))))
 
   PSpliceableVector
   (splicev [this that]
