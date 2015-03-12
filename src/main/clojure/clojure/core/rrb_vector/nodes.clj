@@ -32,10 +32,13 @@
   (^boolean regular [node])
   (clone [^clojure.core.ArrayManager am ^int shift node]))
 
+(declare validate-node!)
 (def object-nm
   (reify NodeManager
-    (node [_ edit arr]
-      (PersistentVector$Node. edit arr))
+    (node [this edit arr]
+      (let [n (PersistentVector$Node. edit arr)]
+        (validate-node! this n)
+        n))
     (empty [_]
       empty-pv-node)
     (array [_ node]
@@ -209,8 +212,7 @@
         (let [new-arr (aclone ^objects arr)]
           (aset ^objects new-arr i child)
           (.node nm nil new-arr))
-        (let [arr     (.array nm parent)
-              new-arr (object-array 33)
+        (let [new-arr (object-array 33)
               step    (bit-shift-left 1 shift)
               rngs    (int-array 33)]
           (aset rngs 32 (inc i))
@@ -222,7 +224,7 @@
               (aset rngs j r)
               (recur (inc j) (+ r step))))
           (aset rngs i (int (last-range nm child)))
-          (.node nm nil arr))))
+          (.node nm nil new-arr))))
     (let [rngs     (ranges nm parent)
           new-rngs (aclone rngs)
           i        (dec (aget rngs 32))
@@ -304,3 +306,62 @@
                         (.node nm nil tail)))
         (aset new-arr (if (== shift 5) li (dec li)) cret))
       (.node nm nil new-arr))))
+
+(defn count-elements
+  [nm node]
+  (when node
+    (let [regular? (.regular nm node)
+          arr      (seq (.array nm node))
+          children (take-while #(not (nil? %)) (take 32 arr))
+          node?    #(= (type %) clojure.lang.PersistentVector$Node)
+          leaf?    (not (node? (first children)))
+          count-elems #(count-elements nm %)]
+      (if leaf?
+        (count (remove nil? arr))
+        (reduce + (map count-elems children))))))
+
+(defn print-count-tree
+  [nm node]
+  (let [ct (fn ct [nm node]
+            (let [regular? (.regular nm node)
+                  arr      (seq (.array nm node))
+                  children (take-while #(not (nil? %)) (take 32 arr))
+                  node?    #(= (type %) clojure.lang.PersistentVector$Node)
+                  leaf?    (not (node? (first children)))]
+              (if leaf?
+                [(count (remove nil? arr)) []]
+                (let [counts (map (partial ct nm) children)]
+                  [(reduce #(+ %1 (first %2)) 0 counts) counts]))))
+        as-tree (fn as-tree [[n children] indent]
+                  (println (str indent "- " n))
+                  (doseq [c children]
+                    (as-tree c (str "  " indent))))]
+    (prn (as-tree (ct nm node) ""))))
+
+(defn validate-node!
+  [nm node]
+  (let [regular? (.regular nm node)
+        arr      (seq (.array nm node))
+        children (take-while #(not (nil? %)) (take 32 arr))
+        node?    #(= (type %) clojure.lang.PersistentVector$Node)
+        leaf?    (not (node? (first children)))
+        count-elems #(validate-node! nm %)]
+    (cond
+      leaf?    (let [c (count (remove nil? arr))]
+                 c)
+      regular? (let [c (reduce + (map count-elems children))]
+                 c)
+      :else    (let [rngs            (take 32 (ranges nm node))
+                     max-rng         (apply max rngs)
+                     children-counts (map count-elems children)
+                     sum             (reduce + children-counts)]
+                 (when-not (= sum max-rng)
+                   (throw (ex-info "Sum and ranges mismatch"
+                                   {:sum sum
+                                    :max-rng max-rng
+                                    :rngs rngs
+                                    :children-counts children-counts
+                                    :children children})))
+                 sum))))
+
+

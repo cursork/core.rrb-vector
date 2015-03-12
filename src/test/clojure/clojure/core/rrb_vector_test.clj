@@ -1,5 +1,6 @@
 (ns clojure.core.rrb-vector-test
   (:require [clojure.core.rrb-vector :as fv]
+            [clojure.core.rrb-vector.nodes :as nodes]
             [clojure.core.rrb-vector.debug :as dv]
             [clojure.core.reducers :as r])
   (:use clojure.test
@@ -137,6 +138,63 @@
         (list-iterator (seq v))     2048
         (list-iterator v 100)       1948
         (list-iterator (seq v) 100) 1948))))
+
+(defn valid-node?
+  ([nm node] (valid-node? nm node ["root"]))
+  ([nm node location]
+   (let [regular?     (.regular nm node)
+         arr          (seq (.array nm node))
+         children     (take-while #(not (nil? %)) (take 32 arr))
+         node?        #(= (type %) clojure.lang.PersistentVector$Node)
+         leaf?        (not (node? (first children)))
+         array-cnt-ok (or leaf?
+                          (if regular?
+                            (= (count arr) 32)
+                            (= (count arr) 33)))
+         rng-ok       (or regular?
+                          (let [[a b] (split-with (complement zero?) (take 32 (nodes/ranges nm node)))]
+                            (and (= (count a) (count children))
+                                 (every? zero? b))))]
+     (if (and array-cnt-ok rng-ok)
+       (dorun (map-indexed (fn [i c] (valid-node? nm c (conj location i)))
+                           (filter node? children)))
+       (throw (ex-info "Bad node" {:location location :node node :array-cnt-ok array-cnt-ok :rng-ok rng-ok})))
+     true)))
+
+(defn jprn [& args] (.println System/out (apply str (map print-str args))))
+(defn count-elements
+  ([v] (+ (count (.tail v)) (count-elements nodes/object-nm (.root v) "  ")))
+  ([nm node indent]
+   (let [regular? (.regular nm node)
+         arr      (seq (.array nm node))
+         children (take-while #(not (nil? %)) (take 32 arr))
+         node?    #(= (type %) clojure.lang.PersistentVector$Node)
+         leaf?    (not (node? (first children)))
+         count-elems #(count-elements nm % (str indent "    "))
+         p        #(jprn indent %&)]
+     (cond
+       leaf?    (let [c (count (remove nil? arr))]
+                  (p "Leaf:" c arr)
+                  c)
+       regular? (let [c (reduce + (map count-elems children))]
+                  (p "Regular:" c)
+                  c)
+       :else    (let [rngs            (take 32 (nodes/ranges nm node))
+                      max-rng         (apply max rngs)
+                      children-counts (map count-elems children)
+                      sum             (reduce + children-counts)]
+                  (p "Children Counts:" children-counts)
+                  (p "Sum:" sum)
+                  (p "Rngs:" (seq rngs))
+                  (p "------")
+                  (assert (= sum max-rng))
+                  sum)))))
+
+
+(defn insert-by-sub-catvec [v n]
+  (fv/catvec (fv/subvec v 0 n) (fv/vec ['x]) (fv/subvec v n)))
+(defn repeated-subvec-catvec [i]
+  (reduce insert-by-sub-catvec (fv/vec (range i)) (range i 0 -1)))
 
 (deftest test-reduce-subvec-catvec
   (letfn [(insert-by-sub-catvec [v n]
