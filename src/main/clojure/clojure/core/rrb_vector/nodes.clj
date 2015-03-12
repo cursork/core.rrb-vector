@@ -32,14 +32,10 @@
   (^boolean regular [node])
   (clone [^clojure.core.ArrayManager am ^int shift node]))
 
-(declare validate-node!)
-
 (def object-nm
   (reify NodeManager
-    (node [this edit arr]
-      (let [n (PersistentVector$Node. edit arr)]
-        (validate-node! this n)
-        n))
+    (node [_ edit arr]
+      (PersistentVector$Node. edit arr))
     (empty [_]
       empty-pv-node)
     (array [_ node]
@@ -309,28 +305,3 @@
         (aset new-arr (if (== shift 5) li (dec li)) cret))
       (.node nm nil new-arr))))
 
-(defn validate-node!
-  [nm node]
-  (let [regular? (.regular nm node)
-        arr      (seq (.array nm node))
-        children (take-while #(not (nil? %)) (take 32 arr))
-        node?    #(= (type %) clojure.lang.PersistentVector$Node)
-        leaf?    (not (node? (first children)))
-        count-elems #(validate-node! nm %)]
-    (cond
-      leaf?    (let [c (count (remove nil? arr))]
-                 c)
-      regular? (let [c (reduce + (map count-elems children))]
-                 c)
-      :else    (let [rngs            (take 32 (ranges nm node))
-                     max-rng         (apply max rngs)
-                     children-counts (map count-elems children)
-                     sum             (reduce + children-counts)]
-                 (when-not (= sum max-rng)
-                   (throw (ex-info "Sum and ranges mismatch"
-                                   {:sum sum
-                                    :max-rng max-rng
-                                    :rngs rngs
-                                    :children-counts children-counts
-                                    :children children})))
-                 sum))))

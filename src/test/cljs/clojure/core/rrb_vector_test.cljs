@@ -91,13 +91,13 @@
                            (range 64))
              (concat (range 123) (range 68) (range 64)))))
 
-(defn test-splice-high-subtree-branch-count []
-  (let [x        (fv/vec (repeat 1145 \a))
-        y        (fv/catvec (fv/subvec x 0 778) (fv/subvec x 778 779) [1] (fv/subvec x 779))
-        z        (fv/catvec (fv/subvec y 0 780) [2] (fv/subvec y 780 781) (fv/subvec y 781))
-        res      (fv/catvec (fv/subvec z 0 780) [] [3] (fv/subvec z 781))
-        expected (concat (repeat 779 \a) [1] [3] (repeat 366 \a))]
-    (assert (= res expected))))
+(defn test-reduce-subvec-catvec []
+  (letfn [(insert-by-sub-catvec [v n]
+            (fv/catvec (fv/subvec v 0 n) (fv/vec ['x]) (fv/subvec v n)))
+          (repeated-subvec-catvec [i]
+            (reduce insert-by-sub-catvec (fv/vec (range i)) (range i 0 -1)))]
+    (assert (= (repeated-subvec-catvec 2371) (interleave (range 2371) (repeat 'x))))))
+
 
 (defn run-tests []
   (test-slicing)
@@ -109,7 +109,7 @@
   (test-assoc)
   (test-assoc!)
   (test-relaxed)
-  (test-splice-high-subtree-branch-count)
+  (test-reduce-subvec-catvec)
   (println "Tests completed without exception."))
 
 (run-tests)
