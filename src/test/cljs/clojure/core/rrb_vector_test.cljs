@@ -117,6 +117,13 @@
     ;; 955 x 952 x 953 x 954 x 955 x 952 x 953 x 954 x 955 x 952 x 953
     (assert (equiv-sequential' (repeated-subvec-catvec 2371) (interleave (range 2371) (repeat 'x))))))
 
+(defn test-splice-high-subtree-branch-count []
+  (let [x        (fv/vec (repeat 1145 \a))
+        y        (fv/catvec (fv/subvec x 0 778) (fv/subvec x 778 779) [1] (fv/subvec x 779))
+        z        (fv/catvec (fv/subvec y 0 780) [2] (fv/subvec y 780 781) (fv/subvec y 781))
+        res      (fv/catvec (fv/subvec z 0 780) [] [3] (fv/subvec z 781))
+        expected (concat (repeat 779 \a) [1] [3] (repeat 366 \a))]
+    (assert (= res expected))))
 
 (defn run-tests []
   (test-slicing)
@@ -129,6 +136,7 @@
   (test-assoc!)
   (test-relaxed)
   (test-reduce-subvec-catvec)
+  (test-splice-high-subtree-branch-count)
   (println "Tests completed without exception."))
 
 (run-tests)
