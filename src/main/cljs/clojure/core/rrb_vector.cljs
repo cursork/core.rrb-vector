@@ -30,7 +30,9 @@
   (:refer-clojure :exclude [vector vec subvec])
   (:require [clojure.core.rrb-vector.protocols :refer [-slicev -splicev]]
             [clojure.core.rrb-vector.rrbt :refer [-as-rrbt]]
-            clojure.core.rrb-vector.interop)
+            clojure.core.rrb-vector.interop
+            [figwheel.client :as fw]
+            )
   (:require-macros [clojure.core.rrb-vector.macros :refer [gen-vector-method]]))
 
 (defn catvec

@@ -4,7 +4,7 @@
             [goog.string :as gstring]
             goog.string.format))
 
-(set-print-fn! js/print)
+;(set-print-fn! js/print)
 
 (defn format [& args]
   (apply gstring/format args))
@@ -139,4 +139,4 @@
   (test-splice-high-subtree-branch-count)
   (println "Tests completed without exception."))
 
-(run-tests)
+;(run-tests)
