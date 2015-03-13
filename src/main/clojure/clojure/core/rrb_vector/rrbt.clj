@@ -19,114 +19,6 @@
            (clojure.core.rrb_vector.nodes NodeManager)
            (java.util.concurrent.atomic AtomicReference)))
 
-(defonce last-slice (atom nil))
-(defn pop-tail
-  [this shift cnt node]
-  (let [nm (.nm this) am (.am this) root (.root this) tail (.tail this)]
-    ;(prn {:nm nm :node node :cnt cnt :shift shift :array (seq (.array nm node))})
-    (if (.regular nm node)
-      (let [subidx (bit-and
-                     (bit-shift-right (unchecked-dec-int cnt) (int shift))
-                     (int 0x1f))]
-        ;(prn :subidx subidx)
-        ;; TODO ALWAYS failing with: :cnt 32768, :subidx 31
-        ;; Note that the cnt is correct. It just happens to be 32768 every time
-        ;; so obviously it's significant that it is 32^3 / 2^15
-        (cond
-          (and (> (int shift) (int 5))
-               #_(not= cnt 32768)) ;; HAAAAAAACK... But passes tests horrifyingly :(
-          (let [new-child (.popTail this
-                                    (unchecked-subtract-int (int shift) (int 5))
-                                    cnt
-                                    (aget ^objects (.array nm node) subidx))]
-            (if (and (nil? new-child) (zero? subidx))
-              nil
-              (let [arr (aclone ^objects (.array nm node))]
-                (aset arr subidx new-child)
-                (.node nm (.edit nm root) arr))))
-
-          (zero? subidx)
-          nil
-
-          :else
-          (let [arr (aclone ^objects (.array nm node))]
-            (aset arr subidx nil)
-            (.node nm (.edit nm root) arr))))
-      (let [subidx (int (bit-and
-                          (bit-shift-right (unchecked-dec-int cnt) (int shift))
-                          (int 0x1f)))
-            rngs   (ranges nm node)
-            subidx (int (loop [subidx subidx]
-                          (if (or (zero? (aget rngs (unchecked-inc-int subidx)))
-                                  (== subidx (int 31)))
-                            subidx
-                            (recur (unchecked-inc-int subidx)))))
-            new-rngs (aclone rngs)]
-        ;(prn :subidx subidx)
-        (cond
-          (> (int shift) (int 5))
-          (let [child     (aget ^objects (.array nm node) subidx)
-                child-cnt (if (zero? subidx)
-                            (aget rngs 0)
-                            (unchecked-subtract-int
-                              (aget rngs subidx)
-                              (aget rngs (unchecked-dec-int subidx))))
-                ;; TODO HERE. Above child-cnt is wrong? The child-cnt should be
-                ;; the position, not the amount to pop.
-                child-cnt (if (zero? subidx)
-                            cnt
-                            (- cnt (aget rngs (dec subidx))))
-                ;_ (prn :child-cnt child-cnt)
-                new-child (.popTail this
-                                    (unchecked-subtract-int (int shift) (int 5))
-                                    child-cnt
-                                    child)]
-            (cond
-              (and (nil? new-child) (zero? subidx))
-              nil
-
-              (.regular nm child)
-              (let [arr (aclone ^objects (.array nm node))]
-                (aset new-rngs subidx
-                      (unchecked-subtract-int (aget new-rngs subidx) (int 32)))
-                (aset arr subidx new-child)
-                (aset arr (int 32) new-rngs)
-                (if (nil? new-child)
-                  (aset new-rngs 32 (unchecked-dec-int (aget new-rngs 32))))
-                (.node nm (.edit nm root) arr))
-
-              :else
-              (let [rng  (int (last-range nm child))
-                    diff (unchecked-subtract-int
-                           rng
-                           (if new-child
-                             (last-range nm new-child)
-                             0))
-                    arr  (aclone ^objects (.array nm node))]
-                (aset new-rngs subidx
-                      (unchecked-subtract-int (aget new-rngs subidx) diff))
-                (aset arr subidx new-child)
-                (aset arr (int 32) new-rngs)
-                (if (nil? new-child)
-                  (aset new-rngs 32 (unchecked-dec-int (aget new-rngs 32))))
-                (.node nm (.edit nm root) arr))))
-
-          (zero? subidx)
-          nil
-
-          :else
-          (let [arr      (aclone ^objects (.array nm node))
-                child    (aget arr subidx)
-                new-rngs (aclone rngs)]
-            (aset arr subidx nil)
-            (aset arr (int 32) new-rngs)
-            (aset new-rngs subidx 0)
-            (aset new-rngs 32 (unchecked-dec-int (aget new-rngs (int 32))))
-            (.node nm (.edit nm root) arr)))))))
-
-(declare slicev')
-
-
 (def ^:const rrbt-concat-threshold 33)
 (def ^:const max-extra-search-steps 2)
 
@@ -968,7 +860,91 @@
               ret)))))
 
   (popTail [this shift cnt node]
-    (pop-tail this shift cnt node))
+    (if (.regular nm node)
+      (let [subidx (bit-and
+                     (bit-shift-right (unchecked-dec-int cnt) (int shift))
+                     (int 0x1f))]
+        (cond
+          (> (int shift) (int 5))
+          (let [new-child (.popTail this
+                                    (unchecked-subtract-int (int shift) (int 5))
+                                    cnt
+                                    (aget ^objects (.array nm node) subidx))]
+            (if (and (nil? new-child) (zero? subidx))
+              nil
+              (let [arr (aclone ^objects (.array nm node))]
+                (aset arr subidx new-child)
+                (.node nm (.edit nm root) arr))))
+
+          (zero? subidx)
+          nil
+
+          :else
+          (let [arr (aclone ^objects (.array nm node))]
+            (aset arr subidx nil)
+            (.node nm (.edit nm root) arr))))
+      (let [subidx (int (bit-and
+                          (bit-shift-right (unchecked-dec-int cnt) (int shift))
+                          (int 0x1f)))
+            rngs   (ranges nm node)
+            subidx (int (loop [subidx subidx]
+                          (if (or (zero? (aget rngs (unchecked-inc-int subidx)))
+                                  (== subidx (int 31)))
+                            subidx
+                            (recur (unchecked-inc-int subidx)))))
+            new-rngs (aclone rngs)]
+        (cond
+          (> (int shift) (int 5))
+          (let [child     (aget ^objects (.array nm node) subidx)
+                child-cnt (if (zero? subidx)
+                            cnt
+                            (- cnt (aget rngs (dec subidx))))
+                new-child (.popTail this
+                                    (unchecked-subtract-int (int shift) (int 5))
+                                    child-cnt
+                                    child)]
+            (cond
+              (and (nil? new-child) (zero? subidx))
+              nil
+
+              (.regular nm child)
+              (let [arr (aclone ^objects (.array nm node))]
+                (aset new-rngs subidx
+                      (unchecked-subtract-int (aget new-rngs subidx) (int 32)))
+                (aset arr subidx new-child)
+                (aset arr (int 32) new-rngs)
+                (if (nil? new-child)
+                  (aset new-rngs 32 (unchecked-dec-int (aget new-rngs 32))))
+                (.node nm (.edit nm root) arr))
+
+              :else
+              (let [rng  (int (last-range nm child))
+                    diff (unchecked-subtract-int
+                           rng
+                           (if new-child
+                             (last-range nm new-child)
+                             0))
+                    arr  (aclone ^objects (.array nm node))]
+                (aset new-rngs subidx
+                      (unchecked-subtract-int (aget new-rngs subidx) diff))
+                (aset arr subidx new-child)
+                (aset arr (int 32) new-rngs)
+                (if (nil? new-child)
+                  (aset new-rngs 32 (unchecked-dec-int (aget new-rngs 32))))
+                (.node nm (.edit nm root) arr))))
+
+          (zero? subidx)
+          nil
+
+          :else
+          (let [arr      (aclone ^objects (.array nm node))
+                child    (aget arr subidx)
+                new-rngs (aclone rngs)]
+            (aset arr subidx nil)
+            (aset arr (int 32) new-rngs)
+            (aset new-rngs subidx 0)
+            (aset new-rngs 32 (unchecked-dec-int (aget new-rngs (int 32))))
+            (.node nm (.edit nm root) arr)))))))
 
   (newPath [this ^AtomicReference edit ^int shift node]
     (if (== (.alength am tail) (int 32))
@@ -1067,8 +1043,60 @@
   
   PSliceableVector
   (slicev [this start end]
-    (reset! last-slice [this start end])
-    (slicev' this start end))
+    (let [start   (int start)
+          end     (int end)
+          new-cnt (unchecked-subtract-int end start)]
+      (cond
+        (or (neg? start) (> end cnt))
+        (throw (IndexOutOfBoundsException.))
+
+        (== start end)
+        ;; NB. preserves metadata
+        (empty this)
+
+        (> start end)
+        (throw (IllegalStateException. "start index greater than end index"))
+
+        :else
+        (let [tail-off (.tailoff this)]
+          (if (>= start tail-off)
+            (let [new-tail (.array am new-cnt)]
+              (System/arraycopy tail (unchecked-subtract-int start tail-off)
+                                new-tail 0
+                                new-cnt)
+              (Vector. nm am new-cnt (int 5) (.empty nm) new-tail _meta -1 -1))
+            (let [tail-cut? (> end tail-off)
+                  new-root  (if tail-cut?
+                              root
+                              (slice-right nm am root shift end))
+                  new-root  (if (zero? start)
+                              new-root
+                              (slice-left nm am new-root shift start
+                                          (min end tail-off)))
+                  new-tail  (if tail-cut?
+                              (let [new-len  (unchecked-subtract-int end tail-off)
+                                    new-tail (.array am new-len)]
+                                (System/arraycopy tail 0 new-tail 0 new-len)
+                                new-tail)
+                              (.arrayFor (Vector. nm am new-cnt shift new-root
+                                                  (.array am 0) nil -1 -1)
+                                         (unchecked-dec-int new-cnt)))
+                  new-root  (if tail-cut?
+                              new-root
+                              (.popTail (Vector. nm am
+                                                 new-cnt
+                                                 shift new-root
+                                                 (.array am 0) nil -1 -1)
+                                        shift new-cnt new-root))]
+              (if (nil? new-root)
+                (Vector. nm am new-cnt 5 (.empty nm) new-tail _meta -1 -1)
+                (loop [r new-root
+                       s (int shift)]
+                  (if (and (> s (int 5))
+                           (nil? (aget ^objects (.array nm r) 1)))
+                    (recur (aget ^objects (.array nm r) 0)
+                           (unchecked-subtract-int s (int 5)))
+                    (Vector. nm am new-cnt s r new-tail _meta -1 -1))))))))))
 
   PSpliceableVector
   (splicev [this that]
@@ -1824,61 +1852,3 @@
                        (unchecked-subtract-int shift (int 5)))))))) 
       (throw (IndexOutOfBoundsException.)))))
 
-(defn slicev'
-  [this start end]
-  (let [nm (.nm this) am (.am this) root (.root this) tail (.tail this) cnt (.cnt this) _meta (._meta this) shift (.shift this)]
-    (let [start   (int start)
-          end     (int end)
-          new-cnt (unchecked-subtract-int end start)]
-      ;(prn :new-cnt new-cnt)
-      (cond
-        (or (neg? start) (> end cnt))
-        (throw (IndexOutOfBoundsException.))
-
-        (== start end)
-        ;; NB. preserves metadata
-        (empty this)
-
-        (> start end)
-        (throw (IllegalStateException. "start index greater than end index"))
-
-        :else
-        (let [tail-off (.tailoff this)]
-          (if (>= start tail-off)
-            (let [new-tail (.array am new-cnt)]
-              (System/arraycopy tail (unchecked-subtract-int start tail-off)
-                                new-tail 0
-                                new-cnt)
-              (Vector. nm am new-cnt (int 5) (.empty nm) new-tail _meta -1 -1))
-            (let [tail-cut? (> end tail-off)
-                  new-root  (if tail-cut?
-                              root
-                              (slice-right nm am root shift end))
-                  new-root  (if (zero? start)
-                              new-root
-                              (slice-left nm am new-root shift start
-                                          (min end tail-off)))
-                  new-tail  (if tail-cut?
-                              (let [new-len  (unchecked-subtract-int end tail-off)
-                                    new-tail (.array am new-len)]
-                                (System/arraycopy tail 0 new-tail 0 new-len)
-                                new-tail)
-                              (.arrayFor (Vector. nm am new-cnt shift new-root
-                                                  (.array am 0) nil -1 -1)
-                                         (unchecked-dec-int new-cnt)))
-                  new-root  (if tail-cut?
-                              new-root
-                              (.popTail (Vector. nm am
-                                                 new-cnt
-                                                 shift new-root
-                                                 (.array am 0) nil -1 -1)
-                                        shift new-cnt new-root))]
-              (if (nil? new-root)
-                (Vector. nm am new-cnt 5 (.empty nm) new-tail _meta -1 -1)
-                (loop [r new-root
-                       s (int shift)]
-                  (if (and (> s (int 5))
-                           (nil? (aget ^objects (.array nm r) 1)))
-                    (recur (aget ^objects (.array nm r) 0)
-                           (unchecked-subtract-int s (int 5)))
-                    (Vector. nm am new-cnt s r new-tail _meta -1 -1)))))))))))
