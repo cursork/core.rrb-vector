@@ -1,5 +1,5 @@
 (ns clojure.core.rrb-vector.rrbt
-  (:refer-clojure :exclude [array-for push-tail pop-tail new-path do-assoc ->VectorNode])
+  (:refer-clojure :exclude [array-for push-tail pop-tail new-path do-assoc])
   (:require [clojure.core.rrb-vector.protocols
              :refer [PSliceableVector -slicev
                      PSpliceableVector -splicev]]
@@ -7,7 +7,6 @@
              :refer [regular? empty-node ranges overflow? last-range
                      regular-ranges first-child last-child remove-leftmost-child
                      replace-leftmost-child replace-rightmost-child
-                     validate-node!
                      fold-tail new-path* index-of-nil]]
             [clojure.core.rrb-vector.trees
              :refer [tail-offset array-for push-tail pop-tail new-path
@@ -15,12 +14,6 @@
             [clojure.core.rrb-vector.transients
              :refer [ensure-editable editable-root editable-tail push-tail!
                      pop-tail! do-assoc!]]))
-
-(defn ->VectorNode
-  [& args]
-  (let [n (apply clojure.core/->VectorNode args)]
-    (validate-node! n)
-    n))
 
 (def ^:const rrbt-concat-threshold 33)
 (def ^:const max-extra-search-steps 2)

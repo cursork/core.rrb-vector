@@ -1,7 +1,6 @@
 (ns clojure.core.rrb-vector.nodes
   (:refer-clojure :exclude [clone]))
 
-(declare validate-node!)
 ;;; node ops
 
 (def empty-node cljs.core.PersistentVector.EMPTY_NODE)
@@ -238,29 +237,3 @@
         (aset new-arr li (new-path* (- shift 5) (->VectorNode nil tail)))
         (aset new-arr (if (== shift 5) li (dec li)) cret))
       (->VectorNode nil new-arr))))
-
-(defn validate-node!
-  [node]
-  (let [regular? (regular? node)
-        arr      (seq (.-arr node))
-        children (take-while #(not (nil? %)) (take 32 arr))
-        node?    #(= (type %) cljs.core.VectorNode)
-        leaf?    (not (node? (first children)))
-        count-elems #(validate-node! %)]
-    (cond
-      leaf?    (let [c (count (remove nil? arr))]
-                 c)
-      regular? (let [c (reduce + (map count-elems children))]
-                 c)
-      :else    (let [rngs            (take 32 (ranges node))
-                     max-rng         (apply max rngs)
-                     children-counts (map count-elems children)
-                     sum             (reduce + children-counts)]
-                 (when-not (= sum max-rng)
-                   (throw (ex-info "Sum and ranges mismatch"
-                                   {:sum sum
-                                    :max-rng max-rng
-                                    :rngs rngs
-                                    :children-counts children-counts
-                                    :children children})))
-                 sum))))

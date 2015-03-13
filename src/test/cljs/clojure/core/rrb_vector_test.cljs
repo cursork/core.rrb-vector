@@ -4,7 +4,7 @@
             [goog.string :as gstring]
             goog.string.format))
 
-;(set-print-fn! js/print)
+(set-print-fn! js/print)
 
 (defn format [& args]
   (apply gstring/format args))
@@ -91,31 +91,12 @@
                            (range 64))
              (concat (range 123) (range 68) (range 64)))))
 
-;; Copied from cljs.core
-(defn equiv-sequential'
-  "Assumes x is sequential. Returns true if x equals y, otherwise
-  returns false."
-  [x y]
-  (boolean
-    (when (sequential? y)
-      (if (and (counted? x) (counted? y)
-               (not (== (count x) (count y))))
-        false
-        (loop [xs (seq x) ys (seq y)]
-          (prn (first xs) '- (first ys))
-          (cond (nil? xs) (nil? ys)
-            (nil? ys) false
-            (= (first xs) (first ys)) (recur (next xs) (next ys))
-            :else false))))))
-
 (defn test-reduce-subvec-catvec []
   (letfn [(insert-by-sub-catvec [v n]
             (fv/catvec (fv/subvec v 0 n) (fv/vec ['x]) (fv/subvec v n)))
           (repeated-subvec-catvec [i]
             (reduce insert-by-sub-catvec (fv/vec (range i)) (range i 0 -1)))]
-    ;; TODO starts repeating itself :(
-    ;; 955 x 952 x 953 x 954 x 955 x 952 x 953 x 954 x 955 x 952 x 953
-    (assert (equiv-sequential' (repeated-subvec-catvec 2371) (interleave (range 2371) (repeat 'x))))))
+    (assert (= (repeated-subvec-catvec 2371) (interleave (range 2371) (repeat 'x))))))
 
 (defn test-splice-high-subtree-branch-count []
   (let [x        (fv/vec (repeat 1145 \a))
@@ -139,4 +120,4 @@
   (test-splice-high-subtree-branch-count)
   (println "Tests completed without exception."))
 
-;(run-tests)
+(run-tests)
