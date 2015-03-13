@@ -898,7 +898,7 @@
           (let [child     (aget ^objects (.array nm node) subidx)
                 child-cnt (if (zero? subidx)
                             cnt
-                            (- cnt (aget rngs (dec subidx))))
+                            (unchecked-subtract-int cnt (aget rngs (unchecked-dec-int subidx))))
                 new-child (.popTail this
                                     (unchecked-subtract-int (int shift) (int 5))
                                     child-cnt
@@ -944,7 +944,7 @@
             (aset arr (int 32) new-rngs)
             (aset new-rngs subidx 0)
             (aset new-rngs 32 (unchecked-dec-int (aget new-rngs (int 32))))
-            (.node nm (.edit nm root) arr)))))))
+            (.node nm (.edit nm root) arr))))))
 
   (newPath [this ^AtomicReference edit ^int shift node]
     (if (== (.alength am tail) (int 32))
