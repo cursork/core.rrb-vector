@@ -6,7 +6,8 @@
         clojure.template)
   (:import (clojure.lang ExceptionInfo)
            (java.util NoSuchElementException)))
-
+(require '[clojure.core.rrb-vector.rrbt :refer [last-slice slicev']])
+(require '[clojure.core.rrb-vector.protocols :refer [slicev]])
 (deftest test-slicing
   (testing "slicing"
     (is (dv/check-subvec 32000 10 29999 1234 18048 10123 10191)))
