@@ -107,8 +107,7 @@
   (if (regular? current-node)
     (let [subidx (bit-and (bit-shift-right (dec cnt) shift) 0x1f)]
       (cond
-        (and (> shift 5)
-             (not= cnt 32768)) ;; HAAAAAAACK... See .clj side :(
+        (> shift 5)
         (let [new-child (pop-tail (- shift 5) cnt root-edit
                                   (aget (.-arr current-node) subidx))]
           (if (and (nil? new-child) (zero? subidx))
@@ -136,8 +135,8 @@
         (> shift 5)
         (let [child     (aget (.-arr current-node) subidx)
               child-cnt (if (zero? subidx)
-                          (aget rngs 0)
-                          (- (aget rngs subidx) (aget rngs (dec subidx))))
+                          cnt
+                          (- cnt (aget rngs (dec subidx))))
               new-child (pop-tail (- shift 5) child-cnt root-edit child)]
           (cond
             (and (nil? new-child) (zero? subidx))

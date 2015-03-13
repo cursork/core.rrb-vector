@@ -862,8 +862,8 @@
   (popTail [this shift cnt node]
     (if (.regular nm node)
       (let [subidx (bit-and
-                     (bit-shift-right (unchecked-dec-int cnt) (int shift))
-                     (int 0x1f))]
+                    (bit-shift-right (unchecked-dec-int cnt) (int shift))
+                    (int 0x1f))]
         (cond
           (> (int shift) (int 5))
           (let [new-child (.popTail this
@@ -884,8 +884,8 @@
             (aset arr subidx nil)
             (.node nm (.edit nm root) arr))))
       (let [subidx (int (bit-and
-                          (bit-shift-right (unchecked-dec-int cnt) (int shift))
-                          (int 0x1f)))
+                         (bit-shift-right (unchecked-dec-int cnt) (int shift))
+                         (int 0x1f)))
             rngs   (ranges nm node)
             subidx (int (loop [subidx subidx]
                           (if (or (zero? (aget rngs (unchecked-inc-int subidx)))
@@ -920,10 +920,10 @@
               :else
               (let [rng  (int (last-range nm child))
                     diff (unchecked-subtract-int
-                           rng
-                           (if new-child
-                             (last-range nm new-child)
-                             0))
+                          rng
+                          (if new-child
+                            (last-range nm new-child)
+                            0))
                     arr  (aclone ^objects (.array nm node))]
                 (aset new-rngs subidx
                       (unchecked-subtract-int (aget new-rngs subidx) diff))
