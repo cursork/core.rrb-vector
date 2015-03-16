@@ -237,6 +237,7 @@
             (when (< j new-len)
               (aset rngs j r)
               (recur (inc j) (+ r step))))
+          (aset rngs (dec new-len) (- end start))
           (aset rngs 32 new-len)
           (array-copy arr (if (nil? new-child) (inc i) i)
                       new-arr 0
