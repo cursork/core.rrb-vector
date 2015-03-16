@@ -135,8 +135,8 @@
         (> shift 5)
         (let [child     (aget (.-arr current-node) subidx)
               child-cnt (if (zero? subidx)
-                          (aget rngs 0)
-                          (- (aget rngs subidx) (aget rngs (dec subidx))))
+                          cnt
+                          (- cnt (aget rngs (dec subidx))))
               new-child (pop-tail (- shift 5) child-cnt root-edit child)]
           (cond
             (and (nil? new-child) (zero? subidx))

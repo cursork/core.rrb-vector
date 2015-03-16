@@ -432,7 +432,6 @@
               (when (< j new-len)
                 (aset rngs j r)
                 (recur (unchecked-inc-int j) (unchecked-add-int r step))))
-            (aset rngs (dec new-len) (- end start))
             (aset rngs 32 new-len)
             (System/arraycopy arr (if (nil? new-child) (unchecked-inc-int i) i)
                               new-arr 0
@@ -901,10 +900,8 @@
           (> (int shift) (int 5))
           (let [child     (aget ^objects (.array nm node) subidx)
                 child-cnt (if (zero? subidx)
-                            (aget rngs 0)
-                            (unchecked-subtract-int
-                             (aget rngs subidx)
-                             (aget rngs (unchecked-dec-int subidx))))
+                            cnt
+                            (unchecked-subtract-int cnt (aget rngs (unchecked-dec-int subidx))))
                 new-child (.popTail this
                                     (unchecked-subtract-int (int shift) (int 5))
                                     child-cnt
@@ -1862,3 +1859,4 @@
                        (aget ^objects (.array nm node) j)
                        (unchecked-subtract-int shift (int 5)))))))) 
       (throw (IndexOutOfBoundsException.)))))
+
