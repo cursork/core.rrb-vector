@@ -902,8 +902,10 @@
           (> (int shift) (int 5))
           (let [child     (aget ^objects (.array nm node) subidx)
                 child-cnt (if (zero? subidx)
-                            cnt
-                            (unchecked-subtract-int cnt (aget rngs (unchecked-dec-int subidx))))
+                            (aget rngs 0)
+                            (unchecked-subtract-int
+                             (aget rngs subidx)
+                             (aget rngs (unchecked-dec-int subidx))))
                 new-child (.popTail this
                                     (unchecked-subtract-int (int shift) (int 5))
                                     child-cnt
