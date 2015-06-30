@@ -389,7 +389,7 @@
 
   IEmptyableCollection
   (-empty [_]
-    (with-meta cljs.core.PersistentVector.EMPTY meta))
+    (with-meta (Vector. 0 5 cljs.core.PersistentVector.EMPTY_NODE (make-array 0) nil 0) meta))
 
   IStack
   (-peek [this]
@@ -402,7 +402,7 @@
       (throw (js/Error. "Can't pop empty vector"))
 
       (== 1 cnt)
-      (-with-meta cljs.core.PersistentVector.EMPTY meta)
+      (-with-meta (empty this) meta)
 
       (> (alength tail) 1)
       (let [new-tail (make-array (dec (alength tail)))]
