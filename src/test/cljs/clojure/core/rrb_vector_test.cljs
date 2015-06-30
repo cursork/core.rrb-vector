@@ -106,6 +106,12 @@
             (reduce insert-by-sub-catvec (fv/vec (range i)) (range i 0 -1)))]
     (assert (= (repeated-subvec-catvec 2371) (interleave (range 2371) (repeat 'x))))))
 
+(defn test-empty []
+  (assert (= clojure.core.rrb_vector.rrbt.Vector
+             (type (empty (fv/vector 0)))))
+  (assert (= clojure.core.rrb_vector.rrbt.Vector
+             (type (pop (fv/vector 0))))))
+
 (defn run-tests []
   (test-slicing)
   (test-slicing-generative)
@@ -118,6 +124,7 @@
   (test-relaxed)
   (test-splice-high-subtree-branch-count)
   (test-reduce-subvec-catvec)
+  (test-empty)
   (println "Tests completed without exception."))
 
 (run-tests)

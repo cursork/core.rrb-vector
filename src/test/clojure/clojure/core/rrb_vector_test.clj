@@ -153,3 +153,9 @@
                                gen/pos-int)]
             (= (repeated-subvec-catvec cnt)
                (interleave (range cnt) (repeat 'x))))))))
+
+(deftest test-empty
+  (is (= clojure.core.rrb_vector.rrbt.Vector
+         (type (empty (fv/vector 0)))))
+  (is (= clojure.core.rrb_vector.rrbt.Vector
+         (type (pop (fv/vector 0))))))
